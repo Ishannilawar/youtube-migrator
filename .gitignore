@@ -1,0 +1,10 @@
+target/
+*.class
+*.log
+run_log.txt
+
+.DS_Store
+
+tokens/
+credentials.json
+completed.txt
