@@ -1,0 +1,40 @@
+name: YouTube Subscriptions Migrator
+
+on:
+  schedule:
+    - cron: '15 08 * * *'   # runs daily at 08:15 UTC (≈ 1:45 PM IST)
+  workflow_dispatch:
+
+jobs:
+  migrate:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Java 11
+        uses: actions/setup-java@v4
+        with:
+          distribution: 'temurin'
+          java-version: '11'
+
+      - name: Restore credentials & tokens
+        env:
+          CREDENTIALS_JSON: ${{ secrets.CREDENTIALS_JSON }}
+          TOKENS_B64: ${{ secrets.TOKENS_B64 }}
+        run: |
+          printf '%s' "$CREDENTIALS_JSON" > credentials.json
+          printf '%s' "$TOKENS_B64" | base64 --decode > tokens.tar.gz
+          tar xzf tokens.tar.gz
+
+      - name: Build and run migration
+        run: |
+          mvn -B -DskipTests compile
+          mvn -B exec:java -Dexec.mainClass="com.example.youtube.YouTubeResubscribe" > run_log.txt 2>&1
+
+      - name: Upload run log
+        uses: actions/upload-artifact@v4
+        with:
+          name: youtube-migrator-log
+          path: run_log.txt
