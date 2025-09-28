@@ -2,7 +2,7 @@ name: YouTube Subscriptions Migrator
 
 on:
   schedule:
-    - cron: '15 08 * * *'   # runs daily at 08:15 UTC (≈ 1:45 PM IST)
+    - cron: '15 08 * * *'
   workflow_dispatch:
 
 jobs:
@@ -12,14 +12,17 @@ jobs:
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+          persist-credentials: true
 
       - name: Setup Java 11
         uses: actions/setup-java@v4
         with:
-          distribution: 'temurin'
+          distribution: temurin
           java-version: '11'
 
-      - name: Restore credentials & tokens
+      - name: Restore credentials and tokens
         env:
           CREDENTIALS_JSON: ${{ secrets.CREDENTIALS_JSON }}
           TOKENS_B64: ${{ secrets.TOKENS_B64 }}
@@ -31,7 +34,17 @@ jobs:
       - name: Build and run migration
         run: |
           mvn -B -DskipTests compile
-          mvn -B exec:java -Dexec.mainClass="com.example.youtube.YouTubeResubscribe" > run_log.txt 2>&1
+          mvn -B exec:java -Dexec.mainClass="com.example.youtube.YouTubeResubscribe" > run_log.txt 2>&1 || true
+
+      - name: Commit and push updated completed.txt
+        run: |
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git config user.name "github-actions[bot]"
+          git add completed.txt
+          if [ -n "$(git status --porcelain)" ]; then
+            git commit -m "chore: update completed.txt (automated)"
+            git push origin HEAD
+          fi
 
       - name: Upload run log
         uses: actions/upload-artifact@v4
